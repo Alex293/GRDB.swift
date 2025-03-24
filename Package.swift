@@ -30,7 +30,8 @@ if ProcessInfo.processInfo.environment["SPI_BUILDER"] == "1" {
 var targetDependencies: [Target.Dependency] = ["GRDBSQLite"]
 
 
-var GRDBCIPHER = ProcessInfo.processInfo.environment["GRDBCIPHER"]
+//var GRDBCIPHER = ProcessInfo.processInfo.environment["GRDBCIPHER"]
+var GRDBCIPHER: String? = "https://github.com/Alex293/swift-sqlcipher.git#main"
 // e.g.:
 //GRDBCIPHER="https://github.com/skiptools/swift-sqlcipher.git#1.2.1"
 if let SQLCipherRepo = GRDBCIPHER?.split(separator: "#").first,
