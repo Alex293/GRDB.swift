@@ -285,12 +285,14 @@ extension SQLRelation: Refinable {
     func withStableOrder() -> Self {
         with { relation in
             relation.ordering = relation.ordering.appending(Ordering(orderings: { [relation] db in
-                if try db.tableExists(source.tableName) {
+                do {
                     // Order by primary key. Don't order by rowid because those are
                     // not stable: rowids can change after a vacuum.
                     return try db.primaryKey(source.tableName).columns.map { SQLExpression.column($0).sqlOrdering }
-                } else {
-                    // Support for views: create a stable order from all columns:
+                } catch {
+                    // Could not find the primary key. Assume we're ordering
+                    // a view that is not customized with the schemaSource.
+                    // Create a stable order from all columns:
                     // ORDER BY 1, 2, 3, ...
                     let columnCount = try SQLQueryGenerator(relation: relation).columnCount(db)
                     return (1...columnCount).map { SQL(sql: $0.description).sqlOrdering }
@@ -331,7 +333,7 @@ extension SQLRelation: Refinable {
         }
     }
     
-    func aliased(_ alias: TableAlias) -> Self {
+    func aliased(_ alias: TableAliasBase) -> Self {
         with {
             $0.source = $0.source.aliased(alias)
         }
@@ -674,9 +676,9 @@ struct SQLLimit {
 
 struct SQLSource: Sendable {
     var tableName: String
-    var alias: TableAlias?
+    var alias: TableAliasBase?
     
-    func aliased(_ alias: TableAlias) -> SQLSource {
+    func aliased(_ alias: TableAliasBase) -> SQLSource {
         if let sourceAlias = self.alias {
             alias.becomeProxy(of: sourceAlias)
             return self
@@ -705,7 +707,7 @@ extension SQLRelation {
                 }
             }
             
-            func qualified(with alias: TableAlias) -> Element {
+            func qualified(with alias: TableAliasBase) -> Element {
                 switch self {
                 case .terms(let terms):
                     return .terms(terms.map { $0.map { $0.qualified(with: alias) } })
@@ -752,7 +754,7 @@ extension SQLRelation {
                 isReversed: !isReversed)
         }
         
-        func qualified(with alias: TableAlias) -> Ordering {
+        func qualified(with alias: TableAliasBase) -> Ordering {
             Ordering(
                 elements: elements.map { $0.qualified(with: alias) },
                 isReversed: isReversed)
@@ -814,7 +816,7 @@ enum SQLAssociationCondition: Sendable {
     ///         player[Column("id")] == bonus[Column("playerID")]
     ///     })
     ///     Player.with(bonus).joining(required: association)
-    case expression(@Sendable (_ left: TableAlias, _ right: TableAlias) -> SQLExpression?)
+    case expression(@Sendable (_ left: TableAliasBase, _ right: TableAliasBase) -> SQLExpression?)
     
     /// The condition that does not constrain the two associated tables
     /// in any way.
@@ -831,8 +833,8 @@ enum SQLAssociationCondition: Sendable {
     
     func joinExpression(
         _ db: Database,
-        leftAlias: TableAlias,
-        rightAlias: TableAlias)
+        leftAlias: TableAliasBase,
+        rightAlias: TableAliasBase)
     throws -> SQLExpression?
     {
         switch self {
@@ -999,7 +1001,7 @@ extension JoinMapping {
     ///   JOIN operator.
     /// - parameter rightAlias: A TableAlias for the table on the right of the
     ///   JOIN operator.
-    func joinExpression(leftAlias: TableAlias, rightAlias: TableAlias) -> SQLExpression {
+    func joinExpression(leftAlias: TableAliasBase, rightAlias: TableAliasBase) -> SQLExpression {
         map { rightAlias[$0.right] == leftAlias[$0.left] }.joined(operator: .and)
     }
 }

@@ -41,15 +41,22 @@ import GRDB
         let observation = ValueObservation.tracking { [ordering] db in
             switch ordering {
             case .byName:
-                try Player.all().orderedByName().fetchAll(db)
+                try Player
+                    .order { $0.name.collating(.localizedCaseInsensitiveCompare) }
+                    .fetchAll(db)
             case .byScore:
-                try Player.all().orderedByScore().fetchAll(db)
+                try Player
+                    .order { [
+                        $0.score.desc,
+                        $0.name.collating(.localizedCaseInsensitiveCompare),
+                    ] }
+                    .fetchAll(db)
             }
         }
         
         // Start observing the database.
         // Previous observation, if any, is cancelled.
-        cancellable = observation.start(in: appDatabase.reader) { error in
+        cancellable = observation.start(in: appDatabase.reader, scheduling: .immediate) { error in
             // Handle error
         } onChange: { [unowned self] players in
             self.players = players

@@ -511,7 +511,11 @@ extension DatabasePublishers {
             self.start = start
         }
         
-        public func receive<S>(subscriber: S) where S: Subscriber, Failure == S.Failure, Output == S.Input {
+        public func receive<S>(subscriber: S)
+        where S: Subscriber & GRDBSendableMetatype,
+              Failure == S.Failure,
+              Output == S.Input
+        {
             let subscription = ValueSubscription(
                 start: start,
                 downstream: subscriber)
@@ -521,7 +525,7 @@ extension DatabasePublishers {
     
     private class ValueSubscription<Downstream>:
         Subscription, @unchecked Sendable
-    where Downstream: Subscriber,
+    where Downstream: Subscriber & GRDBSendableMetatype,
           Downstream.Failure == Error
     {
         // @unchecked Sendable because `cancellable` and `state` are
@@ -820,7 +824,7 @@ extension ValueObservation {
     ///
     /// // Tracks the 'score' column in the 'player' table
     /// let observation = ValueObservation.tracking(
-    ///     region: Player.select(Column("score"),
+    ///     region: Player.select(\.score),
     ///     fetch: { db in ... })
     ///
     /// // Tracks the 'score' column in the 'player' table
@@ -892,7 +896,7 @@ extension ValueObservation {
     ///
     /// // Tracks the 'score' column in the 'player' table
     /// let observation = ValueObservation.tracking(
-    ///     regions: [Player.select(Column("score")],
+    ///     regions: [Player.select(\.score)],
     ///     fetch: { db in ... })
     ///
     /// // Tracks the 'score' column in the 'player' table
@@ -963,7 +967,7 @@ extension ValueObservation {
     ///     let totalPlayerCount = try Player.fetchCount(db)
     ///
     ///     let bestPlayers = try Player
-    ///         .order(Column("score").desc)
+    ///         .order(\.score.desc)
     ///         .limit(10)
     ///         .fetchAll(db)
     ///

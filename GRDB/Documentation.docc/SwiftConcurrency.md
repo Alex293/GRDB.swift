@@ -91,8 +91,14 @@ extension Player: FetchableRecord, PersistableRecord {
     // because non-'Sendable' type '[any SQLSelectable]'
     // may have shared mutable state
     static let databaseSelection: [any SQLSelectable] = [
-        Column("id"), Column("name"), Column("score")
+        Columns.id, Columns.name, Columns.score
     ]
+
+    enum Columns {
+        static let id = Column("id")
+        static let name = Column("name")
+        static let score = Column("score")
+    }
 }
 ```
 
@@ -101,7 +107,7 @@ extension Player: FetchableRecord, PersistableRecord {
 ```swift
 extension Player: FetchableRecord, PersistableRecord {
     static var databaseSelection: [any SQLSelectable] {
-        [Column("id"), Column("name"), Column("score")]
+        [Columns.id, Columns.name, Columns.score]
     }
 }
 ```
@@ -222,6 +228,12 @@ Task {
     let players = try writer.read(Player.fetchAll)
 }
 ```
+
+## Topics
+
+### Supporting Types
+
+- ``GRDBSendableMetatype``
 
 [demo apps]: https://github.com/groue/GRDB.swift/tree/master/Documentation/DemoApps
 [Migrating to Swift 6]: https://www.swift.org/migration/documentation/migrationguide/
